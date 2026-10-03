@@ -55,6 +55,7 @@ header{margin-bottom:clamp(26px,5vw,52px)}
   width:100%; text-decoration:none; color:inherit; outline:none;
   -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation; /* sen zoom ao tocar dúas veces */
 }
 
 /* ---------- O post-it ---------- */
@@ -91,7 +92,7 @@ header{margin-bottom:clamp(26px,5vw,52px)}
 a.app:active .icona{transform:rotate(0deg) translateY(1px) scale(.97)}
 a.app:focus-visible .icona{outline:3px solid #000; outline-offset:5px}
 
-.app.pronto{cursor:default}
+.app.pronto{cursor:pointer}
 .app.pronto .icona{filter:grayscale(1); opacity:.5}
 
 /* ---------- Recolocar ---------- */
@@ -103,6 +104,29 @@ li.oco .app{opacity:.2}
 }
 .fantasma .icona{transform:rotate(-4deg) scale(1.12); box-shadow:0 1px 1px rgba(0,0,0,.2), 6px 26px 24px -12px rgba(0,0,0,.6); transition:none}
 body.recolocando{cursor:grabbing}
+
+.app.pronto .icona.toque{animation:toque .25s ease}
+@keyframes toque{40%{transform:rotate(calc(var(--giro) * -2)) scale(.94)}}
+
+/* ---------- Caquiña con cronómetro ---------- */
+header{position:relative; padding-right:80px}
+.caca{
+  position:absolute; top:0; right:0;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  background:none; border:none; padding:0; cursor:pointer; font:inherit; color:#000;
+  -webkit-tap-highlight-color:transparent;
+}
+.caca svg{width:clamp(54px,9vw,78px); height:auto; overflow:visible; transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.caca:active svg{transform:scale(.9)}
+.caca.correndo svg{animation:abanear 1.2s ease-in-out infinite; transform-origin:50% 100%}
+@keyframes abanear{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.reloxo{
+  font-weight:800; font-size:15px; font-variant-numeric:tabular-nums;
+  background:var(--papel); border:2px solid #000; border-radius:999px; padding:1px 9px; min-width:58px; text-align:center;
+}
+.reloxo:empty{display:none}
+.caca:focus-visible{outline:3px solid #000; outline-offset:4px; border-radius:12px}
+@media (prefers-reduced-motion:reduce){ .caca.correndo svg{animation:none} }
 
 footer{margin-top:56px; font-size:14px; color:var(--suave); display:flex; gap:14px; flex-wrap:wrap; align-items:center}
 .restaurar{font:inherit; font-size:14px; color:inherit; background:none; border:none; padding:0; text-decoration:underline; cursor:pointer}
@@ -116,6 +140,21 @@ footer{margin-top:56px; font-size:14px; color:var(--suave); display:flex; gap:14
   <header>
     <h1 class="marca">cagando</h1>
     <p class="lema">Os meus xogos e ferramentas, todos nun sitio.</p>
+    <button class="caca" id="caca" type="button" aria-label="Cronómetro: tocar para comezar ou parar">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <g stroke="#000" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M33 4 c2 5 10 7 9 13 c-1 3-3 3-5 3" fill="#9A5B2E"/>
+          <path d="M18 22 c0-4 4-6 8-6 h14 c5 0 8 3 8 6 c0 3-2 5-5 5 H21 c-2 0-3-2-3-5z" fill="#9A5B2E"/>
+          <path d="M12 36 c0-6 4-9 9-9 h22 c6 0 9 4 9 9 c0 3-2 6-6 6 H17 c-3 0-5-3-5-6z" fill="#9A5B2E"/>
+          <path d="M6 51 c0-6 5-9 10-9 h32 c6 0 10 3 10 9 c0 5-4 8-9 8 H15 c-5 0-9-3-9-8z" fill="#9A5B2E"/>
+          <circle cx="25" cy="34" r="4" fill="#fff"/><circle cx="39" cy="34" r="4" fill="#fff"/>
+          <path d="M26 49 q6 5 12 0" fill="none"/>
+        </g>
+        <circle cx="26" cy="35" r="1.8" fill="#000"/><circle cx="40" cy="35" r="1.8" fill="#000"/>
+        <path d="M44 22 c2 0 3-1 3-2" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".6"/>
+      </svg>
+      <span class="reloxo" id="reloxo" aria-live="off"></span>
+    </button>
   </header>
 
   <main>
@@ -132,8 +171,9 @@ footer{margin-top:56px; font-size:14px; color:var(--suave); display:flex; gap:14
 /* =========================================================
    EDITA AQUÍ OS TEUS PROXECTOS
    ---------------------------------------------------------
-   - url: o enderezo. Se o deixas baleiro (""), o post-it sae
-     en gris co selo "En camiño" e non se pode entrar.
+   - url: o enderezo.
+   - encamino:true → o post-it sae en gris co selo "En camiño".
+     Un toque non fai nada; tres toques seguidos entran na web.
    - cor: a cor do post-it.
    - icona: o nome dun debuxo da lista ICONAS (máis abaixo).
    - Para engadir un proxecto, copia unha liña { ... } e cambia os datos.
@@ -141,17 +181,26 @@ footer{margin-top:56px; font-size:14px; color:var(--suave); display:flex; gap:14
      post-its, a súa orde gárdase só no seu navegador.
    ========================================================= */
 const APPS = [
-  { nome:"Imperdible",        desc:"O reto diario do mapa",      url:"https://perdible.vercel.app",         cor:"#C3A6FF", icona:"imperdible" },
-  { nome:"Concellos",         desc:"Atopa os 313 no mapa",       url:"https://concellosgz.vercel.app",      cor:"#7CCBF5", icona:"concellos" },
-  { nome:"Xadrez",            desc:"As coalicións de Schönberg", url:"https://xadrezcoalicions.vercel.app", cor:"#FF7A6B", icona:"xadrez" },
-  { nome:"Ese bicho son eu",  desc:"Que bicho es ti?",           url:"https://esebichosoneu.vercel.app",    cor:"#A8EB7E", icona:"bicho" },
-  { nome:"Cadáver exquisito", desc:"Debuxo colectivo a cegas",   url:"https://exquisitocadaver.vercel.app", cor:"#FFFFFF", icona:"cadaver" },
-  { nome:"Libro de heroes",   desc:"Follas de personaxe D&D",    url:"https://folladnd.vercel.app",         cor:"#F2C79A", icona:"libro" },
-  { nome:"Caderno de canto",  desc:"Estudo do repertorio",       url:"https://luisafernanda.vercel.app",    cor:"#FF9EC4", icona:"canto" },
-  { nome:"Matamiolos",        desc:"Quen foi? Lóxica pura",      url:"",                                    cor:"#FFB45E", icona:"lupa" },
-  { nome:"Baralla",           desc:"Mus, tute, brisca e máis",   url:"",                                    cor:"#6FE0C8", icona:"cartas" },
-  { nome:"Forxa",             desc:"Deseña xogos de mesa",       url:"",                                    cor:"#CFD8E3", icona:"forxa" },
-  { nome:"Particol",          desc:"Partituras compartidas",     url:"",                                    cor:"#F7F2E4", icona:"nota" },
+  // Feitos
+  { nome:"Imperdible",        desc:"O reto diario do mapa",      url:"https://perdible.vercel.app",          cor:"#C3A6FF", icona:"imperdible" },
+  { nome:"Calcetín",          desc:"O reto diario do ceo",       url:"https://calcetin.vercel.app",          cor:"#9DB7FF", icona:"calcetin" },
+  { nome:"Concellos",         desc:"Atopa os 313 no mapa",       url:"https://concellosgz.vercel.app",       cor:"#7CCBF5", icona:"concellos" },
+  { nome:"Xadrez",            desc:"As coalicións de Schönberg", url:"https://xadrezcoalicions.vercel.app",  cor:"#FF7A6B", icona:"xadrez" },
+  { nome:"Ese bicho son eu",  desc:"Que bicho es ti?",           url:"https://esebichosoneu.vercel.app",     cor:"#A8EB7E", icona:"bicho" },
+  { nome:"Cadáver exquisito", desc:"Debuxo colectivo a cegas",   url:"https://exquisitocadaver.vercel.app",  cor:"#FFFFFF", icona:"cadaver" },
+  { nome:"Baralla",           desc:"Mus, tute, brisca e máis",   url:"https://baralla.vercel.app",           cor:"#6FE0C8", icona:"cartas" },
+  { nome:"O meu caos",        desc:"As miñas rutinas",           url:"https://omeucaos.vercel.app",          cor:"#FF9EC4", icona:"caos" },
+  { nome:"Improapp",          desc:"",                           url:"https://improapp.vercel.app",          cor:"#FFB45E", icona:"mascara" },
+  { nome:"Especula",          desc:"Especulación inmobiliaria",  url:"https://especula.vercel.app",          cor:"#FF7A6B", icona:"casa" },
+  { nome:"Gachapaint",        desc:"Agasallos debuxados pola xente", url:"https://gachapaint.vercel.app",    cor:"#FFC2A8", icona:"gacha" },
+
+  // En camiño: saen en gris. Tres toques seguidos levan á web aínda que estea a medias.
+  { nome:"Matamiolos",        desc:"Quen foi? Lóxica pura",      url:"https://matamiolos.vercel.app",        cor:"#FFB45E", icona:"lupa",    encamino:true },
+  { nome:"Libro de heroes",   desc:"Follas de personaxe D&D",    url:"https://librodeheroes.vercel.app",     cor:"#F2C79A", icona:"libro",   encamino:true },
+  { nome:"Caderno de canto",  desc:"Estudo do repertorio",       url:"https://cadernodecanto.vercel.app",    cor:"#FF9EC4", icona:"canto",   encamino:true },
+  { nome:"Forxa",             desc:"Deseña xogos de mesa",       url:"https://forxa.vercel.app",             cor:"#CFD8E3", icona:"forxa",   encamino:true },
+  { nome:"Particol",          desc:"Partituras compartidas",     url:"https://particol.vercel.app",          cor:"#F7F2E4", icona:"nota",    encamino:true },
+  { nome:"Xogun",             desc:"Os xogos de mesa",           url:"https://xogun.vercel.app",             cor:"#A8EB7E", icona:"meeple",  encamino:true },
 ];
 
 /* =========================================================
@@ -159,7 +208,7 @@ const APPS = [
    ========================================================= */
 const T = 'stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"';
 const ICONAS = {
-  imperdible:`<svg viewBox="0 0 48 48"><path d="M10 38 L34 10" ${T} fill="none"/><path d="M34 10 a5 5 0 1 1 5 6 L16 41 a3 3 0 0 1-4-4" ${T} fill="none"/><path d="M16 41 L10 38" ${T}/><circle cx="37.5" cy="11" r="2" fill="#000"/><path d="M6 43 h6" ${T}/></svg>`,
+  imperdible:`<svg viewBox="0 0 48 48"><ellipse cx="34" cy="44.5" rx="6.5" ry="1.8" fill="#000" opacity=".22"/><path d="M19.5 11 L33.4 41" stroke="#000" stroke-width="3" fill="none"/><path d="M31.4 39.4 L34.6 45.2 L34.8 38 Z" fill="#000" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><path d="M16 11 V28" ${T}/><path d="M10 28 H22 V35 a6 6 0 0 1 -12 0 Z" ${T} fill="#fff"/><circle cx="16" cy="35" r="2.2" fill="#000"/><path d="M16 29.5 V33" stroke="#000" stroke-width="2"/><circle cx="17.5" cy="8" r="4.2" ${T} fill="#fff"/></svg>`,
   concellos:`<svg viewBox="0 0 48 48"><path d="M6 14 L18 8 L30 13 L42 8 L42 34 L30 40 L18 35 L6 40 Z" ${T} fill="#fff"/><path d="M18 8 V35 M30 13 V40" ${T}/><path d="M18 20 L30 24 L30 30 L18 26 Z" fill="#000"/></svg>`,
   xadrez:`<svg viewBox="0 0 48 48"><path d="M24 5 v8 M20 9 h8" ${T}/><path d="M16 22 c0-7 16-7 16 0 c0 4-3 6-3 10 h-10 c0-4-3-6-3-10z" ${T} fill="#F7D046"/><path d="M13 36 h22 l2 6 H11z" ${T} fill="#fff"/></svg>`,
   bicho:`<svg viewBox="0 0 48 48"><ellipse cx="24" cy="28" rx="11" ry="13" ${T} fill="#fff"/><circle cx="24" cy="13" r="6" ${T} fill="#fff"/><path d="M24 17 V41" ${T}/><path d="M13 24 L5 20 M13 31 L5 33 M35 24 L43 20 M35 31 L43 33 M21 8 L17 3 M27 8 L31 3" ${T}/><circle cx="19" cy="25" r="2.2" fill="#000"/><circle cx="29" cy="33" r="2.2" fill="#000"/></svg>`,
@@ -171,6 +220,12 @@ const ICONAS = {
   nota:`<svg viewBox="0 0 48 48"><path d="M4 12 H44 M4 19 H44 M4 26 H44 M4 33 H44 M4 40 H44" stroke="#000" stroke-width="1.6" opacity=".4"/><ellipse cx="17" cy="36" rx="6" ry="4.4" transform="rotate(-20 17 36)" fill="#000"/><ellipse cx="33" cy="29" rx="6" ry="4.4" transform="rotate(-20 33 29)" fill="#000"/><path d="M22.5 34 V10 L38.5 5 V27" ${T} fill="none"/><path d="M22.5 13 L38.5 8" stroke="#000" stroke-width="5"/></svg>`,
   canto:`<svg viewBox="0 0 48 48"><rect x="16" y="4" width="16" height="24" rx="8" ${T} fill="#fff"/><path d="M10 22 a14 14 0 0 0 28 0 M24 36 V44 M16 44 H32" ${T} fill="none"/><path d="M20 12 H28 M20 18 H28" ${T}/></svg>`,
   caderno:`<svg viewBox="0 0 48 48"><rect x="10" y="5" width="30" height="38" rx="3" ${T} fill="#fff"/><path d="M6 12 h8 M6 20 h8 M6 28 h8 M6 36 h8" ${T}/><path d="M19 15 h15 M19 22 h15 M19 29 h9" ${T}/><path d="M28 34 l3 3 l6-7" ${T} fill="none"/></svg>`,
+  calcetin:`<svg viewBox="0 0 48 48"><path d="M18 4 h14 v20 l-2 4 l-10 12 a7 7 0 0 1 -11 -9 l9 -9 z" ${T} fill="#fff"/><path d="M18 4 h14 v6 h-14z" ${T} fill="#FF7A6B"/><path d="M17 22 h14" ${T}/><path d="M38 8 l1.5 3 l3 1.5 l-3 1.5 l-1.5 3 l-1.5 -3 l-3 -1.5 l3 -1.5z" fill="#000"/></svg>`,
+  caos:`<svg viewBox="0 0 48 48"><path d="M24 24 c2-3 6-1 5 2 c-1 5-9 5-10 0 c-2-7 9-11 14-6 c6 6 1 16-8 16 c-10 0-15-9-12-17 c4-10 19-12 25-3" ${T} fill="none"/><circle cx="40" cy="12" r="3" fill="#000"/></svg>`,
+  mascara:`<svg viewBox="0 0 48 48"><path d="M6 8 c10 4 20 4 30 0 c2 14-2 26-15 28 c-12-2-17-14-15-28z" ${T} fill="#fff"/><path d="M13 17 q3-3 6 0 M24 17 q3-3 6 0" ${T} fill="none"/><path d="M14 25 q7 7 14 0" ${T} fill="none"/><path d="M36 14 c4 1 7 0 9-2 c1 10-1 18-9 22" ${T} fill="#000"/></svg>`,
+  casa:`<svg viewBox="0 0 48 48"><path d="M6 22 L24 7 L42 22" ${T} fill="none"/><path d="M11 18 V41 H37 V18" ${T} fill="#fff"/><path d="M30 22 a6 6 0 1 0 0 9" ${T} fill="none"/><path d="M19 25 h9 M19 28.5 h9" ${T}/></svg>`,
+  gacha:`<svg viewBox="0 0 48 48"><g transform="rotate(-25 24 26)"><path d="M10 26 a14 14 0 0 1 28 0 Z" ${T} fill="#7CCBF5"/><path d="M10 26 a14 14 0 0 0 28 0 Z" ${T} fill="#fff"/><path d="M17 17 a8 8 0 0 1 5 -3.5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none"/></g><path d="M38 6 l1.5 3 l3 1.5 l-3 1.5 l-1.5 3 l-1.5 -3 l-3 -1.5 l3 -1.5z" fill="#000"/></svg>`,
+  meeple:`<svg viewBox="0 0 48 48"><path d="M24 5 a6 6 0 0 1 6 6 c0 2-1 4-2 5 c6 1 15 4 15 8 c0 2-4 3-8 2 l5 14 c0 2-3 3-5 3 h-4 l-7-9 l-7 9 h-4 c-2 0-5-1-5-3 l5-14 c-4 1-8 0-8-2 c0-4 9-7 15-8 c-1-1-2-3-2-5 a6 6 0 0 1 6-6z" ${T} fill="#fff"/></svg>`,
 };
 
 /* =========================================================
@@ -192,23 +247,26 @@ function gardarOrde(){
 /* Ordena segundo o gardado; os proxectos novos van ao final */
 function appsOrdenadas(){
   const orde = lerOrde();
-  if (!orde) return APPS;
+  if (!orde) return APPS.slice();
   const pos = n => { const i = orde.indexOf(n); return i < 0 ? Infinity : i; };
   return APPS.map((a, i) => ({a, i})).sort((x, y) => (pos(x.a.nome) - pos(y.a.nome)) || (x.i - y.i)).map(o => o.a);
 }
 
 function pintar(){
-  grella.innerHTML = appsOrdenadas().map(a => {
+  const lista = appsOrdenadas();
+  /* As feitas sempre diante das que están en camiño */
+  const ordenada = [...lista.filter(a => !a.encamino), ...lista.filter(a => a.encamino)];
+  grella.innerHTML = ordenada.map(a => {
     const giro = XIROS[APPS.indexOf(a) % XIROS.length];
     const dentro = `
       <span class="icona" style="--cor:${esc(a.cor)};--giro:${giro}deg">
         ${ICONAS[a.icona] || ''}
         <span class="nome">${esc(a.nome)}</span>
       </span>
-      ${a.url ? `<span class="desc">${esc(a.desc)}</span>` : `<span class="selo">En camiño</span>`}`;
-    return a.url
-      ? `<li data-nome="${esc(a.nome)}"><a class="app" href="${esc(a.url)}" draggable="false">${dentro}</a></li>`
-      : `<li data-nome="${esc(a.nome)}"><div class="app pronto" aria-disabled="true" title="${esc(a.desc)}">${dentro}</div></li>`;
+      ${a.encamino ? `<span class="selo">En camiño</span>` : (a.desc ? `<span class="desc">${esc(a.desc)}</span>` : '')}`;
+    return a.encamino
+      ? `<li data-nome="${esc(a.nome)}" data-grupo="encamino"><div class="app pronto" data-url="${esc(a.url)}" title="Tres toques para espiar">${dentro}</div></li>`
+      : `<li data-nome="${esc(a.nome)}" data-grupo="feita"><a class="app" href="${esc(a.url)}" draggable="false">${dentro}</a></li>`;
   }).join('');
   botonRestaurar.hidden = !lerOrde();
 }
@@ -285,6 +343,7 @@ window.addEventListener('pointermove', e => {
   moverFantasma(e.clientX, e.clientY);
   const debaixo = document.elementFromPoint(e.clientX, e.clientY)?.closest('#grella > li');
   if (!debaixo || debaixo === liActivo) return;
+  if (debaixo.dataset.grupo !== liActivo.dataset.grupo) return;   // non mesturar feitas e en camiño
   const lista = [...grella.children];
   const despois = lista.indexOf(debaixo) > lista.indexOf(liActivo);
   conAnimacion(() => grella.insertBefore(liActivo, despois ? debaixo.nextSibling : debaixo));
@@ -303,7 +362,14 @@ function rematar(){
   }
   liActivo = null;
 }
-window.addEventListener('pointerup', rematar);
+window.addEventListener('pointerup', e => {
+  /* Toque curto (sen arrastrar nin moverse) nun post-it en camiño */
+  if (liActivo && !arrastrando){
+    const app = liActivo.querySelector('.app.pronto');
+    if (app) contarToque(app);
+  }
+  rematar();
+});
 window.addEventListener('pointercancel', rematar);
 
 /* Mentres se arrastra, que a páxina non faga scroll (iPhone/iPad) */
@@ -312,6 +378,55 @@ document.addEventListener('touchmove', e => { if (arrastrando) e.preventDefault(
 grella.addEventListener('contextmenu', e => e.preventDefault());
 /* Despois de recolocar, non entrar no proxecto */
 grella.addEventListener('click', e => { if (evitarClic) { e.preventDefault(); e.stopPropagation(); } }, true);
+
+/* En camiño: tres toques seguidos entran na web a medias */
+let toques = 0, ultimoPronto = null, reloxToques = null;
+function contarToque(app){
+  if (app !== ultimoPronto) toques = 0;
+  ultimoPronto = app; toques++;
+  clearTimeout(reloxToques);
+  reloxToques = setTimeout(() => toques = 0, 700);
+  const ic = app.querySelector('.icona');
+  ic.classList.remove('toque'); void ic.offsetWidth; ic.classList.add('toque');
+  if (toques >= 3){ toques = 0; location.href = app.dataset.url; }
+}
+
+/* ---------- Cronómetro da caquiña ----------
+   Un toque: comeza. Outro toque: para e deixa o tempo á vista.
+   Outro máis: volve a cero e comeza de novo.
+   Segue contando aínda que saias a outra web e volvas. */
+const CRONO = 'cagando-crono';
+const botonCaca = document.getElementById('caca');
+const reloxo = document.getElementById('reloxo');
+let crono = (() => { try { return JSON.parse(localStorage.getItem(CRONO)) || {}; } catch(e){ return {}; } })();
+let tic = null;
+
+const formato = ms => {
+  const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60;
+  const dd = n => String(n).padStart(2, '0');
+  return h ? `${h}:${dd(m)}:${dd(s)}` : `${m}:${dd(s)}`;
+};
+function amosar(){
+  if (crono.inicio) reloxo.textContent = formato(Date.now() - crono.inicio);
+  else if (crono.final != null) reloxo.textContent = formato(crono.final);
+  else reloxo.textContent = '';
+  botonCaca.classList.toggle('correndo', !!crono.inicio);
+}
+function gardarCrono(){ try { localStorage.setItem(CRONO, JSON.stringify(crono)); } catch(e){} }
+function arrancarTic(){ clearInterval(tic); tic = setInterval(amosar, 250); }
+
+botonCaca.addEventListener('click', () => {
+  if (crono.inicio){                       // parar
+    crono = {final: Date.now() - crono.inicio};
+    clearInterval(tic);
+  } else {                                 // comezar
+    crono = {inicio: Date.now()};
+    arrancarTic();
+  }
+  gardarCrono(); amosar();
+});
+if (crono.inicio) arrancarTic();
+amosar();
 </script>
 </body>
 </html>
